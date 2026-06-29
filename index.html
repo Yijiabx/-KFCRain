@@ -39,17 +39,6 @@
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* 全屏预览模式下的容器样式 */
-        .viewport-wrapper.fullscreen-mode {
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: none !important;
-            max-height: none !important;
-            aspect-ratio: auto !important;
-            border-radius: 0 !important;
-            border: none !important;
-        }
-
         /* 背景容器 */
         #bg-container {
             position: absolute;
@@ -57,10 +46,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80');
+            /* 默认背景图片修改为 my_zebra.png */
+            background-image: url('my_zebra.png'); 
             background-size: cover;
             background-position: center;
-            /* 默认背景亮度为 1.0 */
             filter: brightness(1.0) contrast(1.1) saturate(0.9); 
             transition: filter 0.1s ease;
             z-index: 1;
@@ -77,25 +66,25 @@
             pointer-events: none;
         }
 
-        /* 针对手机H5优化的顶部半透明控制面板 */
+        /* 移至画面下方的半透明控制面板 */
         .control-panel {
             position: absolute;
-            top: 0;
+            bottom: 0; /* 控制面板移到画面下方 */
             left: 0;
             width: 100%;
             z-index: 10;
             background: rgba(18, 18, 22, 0.55);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.08); /* 顶部描边 */
             padding: 12px 16px;
             color: #e5e5e5;
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* 全屏时隐藏控制面板 */
+        /* 隐藏时向下平滑划出画面 */
         .control-panel.hidden {
-            transform: translateY(-100%);
+            transform: translateY(100%);
         }
 
         .panel-header {
@@ -175,7 +164,7 @@
             border-color: rgba(255, 255, 255, 0.4);
         }
 
-        /* 悬浮退出全屏按钮 */
+        /* 悬浮退出预览按钮（移至顶部） */
         .exit-preview-btn {
             position: absolute;
             top: 15px;
@@ -202,19 +191,24 @@
 </head>
 <body>
 
+    <!-- 内嵌音频：雨声和背景音乐 -->
+    <audio id="rainAudio" src="rain.mp3" loop autoplay></audio>
+    <audio id="musicAudio" src="music.mp3" loop autoplay></audio>
+
     <!-- 3:4 主画面容器 -->
     <div class="viewport-wrapper" id="viewportWrapper">
         <div id="bg-container"></div>
         <canvas id="rainCanvas"></canvas>
         
         <!-- 悬浮退出预览按钮 -->
-        <button class="exit-preview-btn" id="exitPreviewBtn">退出全屏</button>
+        <button class="exit-preview-btn" id="exitPreviewBtn">退出预览</button>
 
-        <!-- 顶部半透明控制面板 -->
+        <!-- 底部半透明控制面板 -->
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
                 <h3>雨景动效配置</h3>
-                <button class="ui-btn" id="previewBtn">全屏预览</button>
+                <!-- 全屏预览改为了预览 -->
+                <button class="ui-btn" id="previewBtn">预览</button>
             </div>
             
             <div class="control-grid">
@@ -253,6 +247,10 @@
         const controlPanel = document.getElementById('controlPanel');
         const previewBtn = document.getElementById('previewBtn');
         const exitPreviewBtn = document.getElementById('exitPreviewBtn');
+
+        // 音频对象获取
+        const rainAudio = document.getElementById('rainAudio');
+        const musicAudio = document.getElementById('musicAudio');
 
         // 用户可调参数（及设定的默认初始值）
         let currentBgBrightness = 1.00; 
@@ -398,7 +396,6 @@
 
                 // 绘制内层 2/3 大小的椭圆图案
                 if (this.hasPattern && this.patternImg) {
-                    // 安全检测：如果图片已存在且加载完成，则渲染图片；否则渲染一个虚线圆作为占位降级
                     if (this.patternImg.complete && this.patternImg.naturalWidth !== 0) {
                         ctx.save();
                         const innerRadiusX = this.radiusX * 0.67;
@@ -418,7 +415,7 @@
                         );
                         ctx.restore();
                     } else {
-                        // 占位椭圆：当同级目录下无对应图片文件时自动绘制，避免黑屏报错
+                        // 占位椭圆：当同级目录下无对应图片文件时自动绘制，避免报错
                         ctx.save();
                         ctx.beginPath();
                         ctx.ellipse(this.x, this.y, this.radiusX * 0.67, radiusY * 0.67, 0, 0, Math.PI * 2);
@@ -554,6 +551,24 @@
             requestAnimationFrame(animate);
         }
 
+        // --- 音频自动播放与无感激活机制 ---
+        function tryPlayAudio() {
+            rainAudio.play().catch(() => {});
+            musicAudio.play().catch(() => {});
+        }
+
+        // 尝试初始自动播放
+        window.addEventListener('DOMContentLoaded', tryPlayAudio);
+
+        // 绑定页面任意地方的点击/触碰，一旦被拦截，点击后立即无感唤醒音频
+        window.addEventListener('click', () => {
+            tryPlayAudio();
+        }, { once: true }); // 使用 once 保证激活后立即解绑监听，不消耗性能
+        
+        window.addEventListener('touchstart', () => {
+            tryPlayAudio();
+        }, { once: true });
+
         // --- 初始化运行 ---
 
         initFixedPatterns();
@@ -595,20 +610,17 @@
             opacityVal.innerText = globalPatternOpacity.toFixed(2);
         });
 
-        // 5. 全屏预览控制
+        // 5. 预览控制（隐藏控制面板，保留纯净 3:4 手机画面）
         previewBtn.addEventListener('click', () => {
-            wrapper.classList.add('fullscreen-mode');
             controlPanel.classList.add('hidden');
             exitPreviewBtn.style.display = 'block';
-            setTimeout(resizeCanvas, 320); // 等待容器过渡动画结束后重建轨迹
+            tryPlayAudio(); // 辅助激活音频
         });
 
-        // 6. 退出全屏预览控制
+        // 6. 退出预览控制（恢复面板）
         exitPreviewBtn.addEventListener('click', () => {
-            wrapper.classList.remove('fullscreen-mode');
             controlPanel.classList.remove('hidden');
             exitPreviewBtn.style.display = 'none';
-            setTimeout(resizeCanvas, 320);
         });
 
         animate();
