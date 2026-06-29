@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>自适应雨景动效</title>
+    <title>自适应柔和雨景动效</title>
     <style>
         * {
             margin: 0;
@@ -109,7 +109,7 @@
             color: #fff;
         }
 
-        /* 双列网格布局，节约垂直高度 */
+        /* 双列网格布局 */
         .control-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -270,14 +270,14 @@
         let landingEndRatio = 1.00;     
         let globalPatternOpacity = 1.00; 
 
-        // 锁定参数（用户不可调节）
-        const rainDensity = 30;         // 雨量密度：从 20 提高到 75（雨滴明显变多、更绵密）
-        const rainSpeedMultiplier = 1.1; // 速度系数：微调至 1.1x（配合长雨丝，下落更具流动感）
-        const baseRainLength = 30;      // 雨丝长度：从 10 大幅提升至 100（告别“短破折号”，变成飘逸的长雨丝）
-        const baseRainWidth = 1.0;      // 雨丝粗细：从 1.5 调细至 1.0（雨丝更细密精致，像牛毛细雨）
-        const baseRippleSize = 50;     // 椭圆基础大小（保持您的参数）
-        const rippleSizeRandomness = 50; // 大小随机度（保持您的参数）
-        const rainUniformity = 0.85;    // 分布均匀度：从 1 降低至 0.35（形成自然错落的雨幕，防止像排队一样死板）
+        // 升级优化后的锁定参数（用户不可调节，保证画面的绵密柔和）
+        const rainDensity = 75;         // 雨量密度调高（更绵密）
+        const rainSpeedMultiplier = 1.1; // 速度微调（更具流动感）
+        const baseRainLength = 100;     // 雨丝长度大幅拉长（告别短截感）
+        const baseRainWidth = 1.0;      // 雨丝粗细调细（更精致）
+        const baseRippleSize = 50;     
+        const rippleSizeRandomness = 50;
+        const rainUniformity = 0.35;    // 均匀度降低（错落有致，产生空气厚度感）
 
         // 指定的 5 张固定本地品牌图案文件名
         const fixedPatternNames = [
@@ -449,7 +449,8 @@
             }
 
             reset(initFully = false) {
-                this.angle = -Math.PI / 6; 
+                // 【核心软化修改 1】：每根雨丝在落角（-30度）的基础上，加入微幅随机散射（约正负 4 度），打破死板的平行感
+                this.angle = -Math.PI / 6 + (Math.random() - 0.5) * 0.14; 
 
                 const horizonStart = vHeight * landingStartRatio;
                 const horizonEnd = vHeight * landingEndRatio;
@@ -470,16 +471,16 @@
                 const slotX = (this.index + Math.random()) * slotWidth; 
                 this.targetX = randomX + (slotX - randomX) * rainUniformity;
 
-                this.y = -100; 
+                this.y = -120; // 稍微提高起步高度
                 const dy = this.targetY - this.y;
                 const dx = dy * Math.sin(this.angle);
                 this.x = this.targetX - dx; 
 
-                this.length = (baseRainLength + Math.random() * (baseRainLength * 0.5)) * this.scale;
+                this.length = (baseRainLength + Math.random() * (baseRainLength * 0.4)) * this.scale;
                 this.width = baseRainWidth * this.scale;
                 this.speedY = (14 + Math.random() * 8) * this.scale;
                 this.speedX = this.speedY * Math.sin(this.angle);
-                this.alpha = 0.15 + this.scale * 0.35;
+                this.alpha = 0.12 + this.scale * 0.28; // 稍微调低透明度底限，增强柔和感
 
                 if (initFully) {
                     const progress = Math.random();
@@ -489,8 +490,12 @@
             }
 
             update() {
-                this.x += this.speedX * rainSpeedMultiplier;
-                this.y += this.speedY * rainSpeedMultiplier;
+                // 【核心软化修改 2】：引入动态微风摇曳。雨滴在下落轨迹中会有微弱的正弦微风弧度，模拟真实空气阻力，消除僵硬感
+                const windSway = Math.sin(Date.now() * 0.0012 + this.index * 0.15) * 0.015;
+                const activeAngle = this.angle + windSway;
+
+                this.x += this.speedY * Math.sin(activeAngle) * rainSpeedMultiplier;
+                this.y += this.speedY * Math.cos(activeAngle) * rainSpeedMultiplier;
 
                 if (this.y >= this.targetY) {
                     const count = Math.floor(Math.random() * 4) + 4;
@@ -506,12 +511,22 @@
             draw() {
                 ctx.save();
                 ctx.beginPath();
-                ctx.strokeStyle = `rgba(220, 230, 255, ${this.alpha})`;
-                ctx.lineWidth = this.width;
                 
-                ctx.moveTo(this.x, this.y);
+                // 【核心软化修改 3】：利用线性渐变绘制雨丝，让它的头部和尾部自然虚化过渡（0 -> 1 -> 0），模拟相机的运动模糊效果
                 const endX = this.x + this.length * Math.sin(this.angle);
                 const endY = this.y + this.length * Math.cos(this.angle);
+
+                const grad = ctx.createLinearGradient(this.x, this.y, endX, endY);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 0)'); // 尾部渐隐
+                grad.addColorStop(0.3, `rgba(235, 240, 255, ${this.alpha * 0.75})`); // 中部自然色
+                grad.addColorStop(0.7, `rgba(235, 240, 255, ${this.alpha * 0.75})`);
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)'); // 头部渐隐
+
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = this.width;
+                ctx.lineCap = 'round'; // 圆角边缘，相比直角更平滑
+                
+                ctx.moveTo(this.x, this.y);
                 ctx.lineTo(endX, endY);
                 
                 ctx.stroke();
