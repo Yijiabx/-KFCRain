@@ -64,45 +64,37 @@
             pointer-events: none;
         }
 
-        /* 控制面板 */
+        /* 轻量化控制面板：固定放在画面下方 */
         .control-panel {
             position: absolute;
-            left: 20px;
-            top: 20px;
+            bottom: 15px; /* 贴紧 3:4 画面的最下方 */
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 10;
-            background: rgba(18, 18, 22, 0.9);
+            background: rgba(18, 18, 22, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            padding: 16px;
+            padding: 12px;
             border-radius: 8px;
             color: #e5e5e5;
-            width: 300px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        @media (max-width: 1200px) {
-            .control-panel {
-                position: fixed;
-                left: 10px;
-                top: 10px;
-                width: calc(100% - 20px);
-                max-width: 320px;
-            }
+            width: calc(100% - 30px); /* 在手机上两侧留白 */
+            max-width: 270px; /* 控制框稍微变窄变小 */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
         .control-panel h3 {
-            font-size: 14px;
-            margin-bottom: 12px;
+            font-size: 13px;
+            margin-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 6px;
+            padding-bottom: 4px;
             font-weight: 500;
+            text-align: center;
             letter-spacing: 0.5px;
         }
 
         .control-group {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .control-group label {
@@ -115,13 +107,13 @@
         .file-upload-btn {
             display: block;
             width: 100%;
-            padding: 8px;
+            padding: 6px;
             background: rgba(255, 255, 255, 0.06);
             border: 1px dashed rgba(255, 255, 255, 0.2);
             border-radius: 4px;
             text-align: center;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 10px;
             color: #ddd;
             transition: all 0.2s;
         }
@@ -159,57 +151,47 @@
             color: #888;
         }
 
-        /* 音频控制样式 */
-        .audio-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-        }
-
-        .audio-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            min-width: 50px;
-            text-align: center;
-            transition: background 0.2s, border-color 0.2s;
-        }
-
-        .audio-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        /* 录制按钮设计 */
-        .record-btn {
+        /* 全屏预览按钮 */
+        .preview-btn {
             display: block;
             width: 100%;
-            padding: 10px;
-            background: #e02424; 
-            border: none;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 4px;
             text-align: center;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             color: #fff;
-            margin-top: 15px;
+            margin-top: 6px;
             transition: all 0.2s;
-            letter-spacing: 0.5px;
         }
 
-        .record-btn:hover {
-            background: #c81e1e;
+        .preview-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
         }
 
-        .record-btn:disabled {
-            background: #4b5563;
-            cursor: not-allowed;
+        /* 退出预览悬浮按钮 */
+        #exitPreviewBtn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: background 0.2s;
+        }
+
+        #exitPreviewBtn:hover {
+            background: rgba(0, 0, 0, 0.85);
         }
     </style>
 </head>
@@ -219,60 +201,44 @@
     <div class="viewport-wrapper">
         <div id="bg-container"></div>
         <canvas id="rainCanvas"></canvas>
-    </div>
 
-    <!-- 音频资源（预加载并循环播放） -->
-    <audio id="rainAudio" src="rain.mp3" loop></audio>
-    <audio id="musicAudio" src="music.mp3" loop></audio>
+        <!-- 退出预览轻量按钮（默认隐藏） -->
+        <button id="exitPreviewBtn">退出预览</button>
 
-    <!-- 悬浮控制面板 -->
-    <div class="control-panel">
-        <h3>画面控制台</h3>
-        
-        <!-- 背景图替换 -->
-        <div class="control-group">
-            <label>替换背景图片</label>
-            <label class="file-upload-btn">
-                选择本地图片
-                <input type="file" id="bgUploader" accept="image/*">
-            </label>
-        </div>
-
-        <!-- 背景明暗调节 -->
-        <div class="control-group">
-            <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
-            <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
-        </div>
-
-        <!-- 落雨空间范围控制 -->
-        <div class="control-group">
-            <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
-            <input type="range" id="landingStart" min="0" max="100" value="12">
-        </div>
-        <div class="control-group">
-            <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
-            <input type="range" id="landingEnd" min="0" max="100" value="100">
-        </div>
-
-        <!-- 音频控制区域 -->
-        <div class="control-group" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
-            <label>雨声控制 BGM (rain.mp3)</label>
-            <div class="audio-row">
-                <button class="audio-btn" id="playRainBtn">播放</button>
-                <input type="range" id="rainVolume" min="0" max="1" step="0.05" value="0.5">
+        <!-- 悬浮控制面板：置于主容器内部，自适应贴底 -->
+        <div class="control-panel">
+            <h3>雨景控制台</h3>
+            
+            <!-- 背景图替换 -->
+            <div class="control-group">
+                <label>替换背景图片</label>
+                <label class="file-upload-btn">
+                    选择本地图片
+                    <input type="file" id="bgUploader" accept="image/*">
+                </label>
             </div>
-        </div>
 
-        <div class="control-group">
-            <label>背景音乐 BGM (music.mp3)</label>
-            <div class="audio-row">
-                <button class="audio-btn" id="playMusicBtn">播放</button>
-                <input type="range" id="musicVolume" min="0" max="1" step="0.05" value="0.5">
+            <!-- 背景明暗调节 -->
+            <div class="control-group">
+                <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
+                <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
             </div>
-        </div>
 
-        <!-- 视频下载按钮 -->
-        <button class="record-btn" id="recordBtn">录制并下载 8 秒视频</button>
+            <!-- 落雨起始高度 -->
+            <div class="control-group">
+                <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
+                <input type="range" id="landingStart" min="0" max="100" value="12">
+            </div>
+
+            <!-- 落雨结束高度 -->
+            <div class="control-group">
+                <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
+                <input type="range" id="landingEnd" min="0" max="100" value="100">
+            </div>
+
+            <!-- 预览按钮 -->
+            <button class="preview-btn" id="previewBtn">全屏预览</button>
+        </div>
     </div>
 
     <script>
@@ -282,34 +248,28 @@
         const wrapper = document.querySelector('.viewport-wrapper');
 
         // 【锁定为默认参数 - 用户不可更改】
-        const globalPatternOpacity = 1.00;     // 图案透明度默认 1.00
-        const rainDensity = 30;                 // 下雨密度默认 30
-        const rainSpeedMultiplier = 1.0;       // 雨滴下落速度默认 1.0
-        const baseRainLength = 30;             // 雨丝长度默认 30
-        const baseRainWidth = 2;             // 雨丝粗细默认 1.5
-        const baseRippleSize = 110;            // 椭圆基础大小默认 110
-        const rippleSizeRandomness = 100;      // 大小随机度默认 100
-        const rainUniformity = 0.35;           // 默认降落分布均匀度保持 0.35
+        const globalPatternOpacity = 1.00;     // 图案透明度 1.00
+        const rainDensity = 30;                 // 下雨密度 30
+        const rainSpeedMultiplier = 1.0;       // 雨滴下落速度 1.0
+        const baseRainLength = 30;             // 雨丝长度 30
+        const baseRainWidth = 1.5;             // 雨丝粗细 1.5
+        const baseRippleSize = 110;            // 椭圆基础大小 110
+        const rippleSizeRandomness = 100;      // 大小随机度 100
+        const rainUniformity = 0.35;           // 分布均匀度 0.35
 
         // 【允许用户更改的参数初始化】
-        let currentBgBrightness = 1.00;        // 背景亮度默认 1.00
-        let landingStartRatio = 0.12;          // 落雨起始高度默认 12% (0.12)
-        let landingEndRatio = 1.00;            // 落雨结束高度默认 100% (1.00)
+        let currentBgBrightness = 1.00;        // 背景亮度 1.00
+        let landingStartRatio = 0.12;          // 落雨起始高度 12% (0.12)
+        let landingEndRatio = 1.00;            // 落雨结束高度 100% (1.00)
 
-
-        // =======================================================
-        // ★★★ 这里就是您要求的 5 个固定图片文件名，请确保拼写一致 ★★★
-        // =======================================================
+        // 【锁定固定图片名】
         const patternNames = [
             'eggtart.png',
-            'original.png',
+            'original t.png',
             'chicken_wings.png',
             'chicken_popcorn.png',
             'chicken_nuggets.png'
         ];
-        // =======================================================
-
-
         const fixedPatterns = []; 
 
         const raindrops = [];
@@ -342,7 +302,7 @@
             adjustRainDensity();
         }
         
-        // 预加载固定的5款图案
+        // 预加载固定图案
         function preloadFixedPatterns() {
             patternNames.forEach(name => {
                 const img = new Image();
@@ -392,10 +352,8 @@
                 this.growthSpeed = (0.018 * this.maxRadiusX + 0.4) * scale; 
                 this.alpha = 1.0;
 
-                // 2/3 概率生成内部图案
                 this.hasPattern = Math.random() < 0.666;
                 if (this.hasPattern && fixedPatterns.length > 0) {
-                    // 从上面定义的 5 张固定图案库中随机选择
                     this.patternImg = fixedPatterns[Math.floor(Math.random() * fixedPatterns.length)];
                 }
             }
@@ -474,7 +432,8 @@
 
                 const baseHorizon = vHeight * 0.05; 
                 const divisor = vHeight - baseHorizon;
-                const depthScale = divisor > 0 ? (this.targetY - baseHorizon) / divisor : 0;
+                // 加入 Math.max 防止高度差异常导致 depthScale 产生负数或 NaN
+                const depthScale = divisor > 0 ? Math.max(0, (this.targetY - baseHorizon) / divisor) : 0;
                 this.scale = 0.35 + depthScale * 0.65; 
 
                 const randomX = Math.random() * vWidth; 
@@ -544,32 +503,36 @@
         }
 
         function animate() {
-            ctx.clearRect(0, 0, vWidth, vHeight);
+            try {
+                ctx.clearRect(0, 0, vWidth, vHeight);
 
-            // 1. 绘制雨丝
-            for (let i = 0; i < raindrops.length; i++) {
-                raindrops[i].update();
-                raindrops[i].draw();
-            }
-
-            // 2. 绘制水花
-            for (let i = splashes.length - 1; i >= 0; i--) {
-                const sp = splashes[i];
-                sp.update();
-                sp.draw();
-                if (sp.alpha <= 0) {
-                    splashes.splice(i, 1);
+                // 1. 绘制雨丝
+                for (let i = 0; i < raindrops.length; i++) {
+                    raindrops[i].update();
+                    raindrops[i].draw();
                 }
-            }
 
-            // 3. 绘制椭圆涟漪
-            for (let i = ripples.length - 1; i >= 0; i--) {
-                const r = ripples[i];
-                r.update();
-                r.draw();
-                if (r.alpha <= 0) {
-                    ripples.splice(i, 1);
+                // 2. 绘制水花
+                for (let i = splashes.length - 1; i >= 0; i--) {
+                    const sp = splashes[i];
+                    sp.update();
+                    sp.draw();
+                    if (sp.alpha <= 0) {
+                        splashes.splice(i, 1);
+                    }
                 }
+
+                // 3. 绘制椭圆涟漪
+                for (let i = ripples.length - 1; i >= 0; i--) {
+                    const r = ripples[i];
+                    r.update();
+                    r.draw();
+                    if (r.alpha <= 0) {
+                        ripples.splice(i, 1);
+                    }
+                }
+            } catch (e) {
+                console.error("渲染帧发生异常: ", e);
             }
 
             requestAnimationFrame(animate);
@@ -619,121 +582,47 @@
             landingEndVal.innerText = e.target.value + '%';
         });
 
-        // --- 音频控制逻辑 ---
-        const rainAudio = document.getElementById('rainAudio');
-        const musicAudio = document.getElementById('musicAudio');
-        
-        const playRainBtn = document.getElementById('playRainBtn');
-        const rainVolumeSlider = document.getElementById('rainVolume');
-        
-        const playMusicBtn = document.getElementById('playMusicBtn');
-        const musicVolumeSlider = document.getElementById('musicVolume');
+        // --- 全屏预览与退出逻辑 ---
+        const previewBtn = document.getElementById('previewBtn');
+        const exitPreviewBtn = document.getElementById('exitPreviewBtn');
+        const controlPanel = document.querySelector('.control-panel');
+        let isPreviewMode = false;
 
-        // 设置默认音量并使音频节点与滑块保持一致
-        rainAudio.volume = parseFloat(rainVolumeSlider.value);
-        musicAudio.volume = parseFloat(musicVolumeSlider.value);
-
-        playRainBtn.addEventListener('click', () => {
-            if (rainAudio.paused) {
-                rainAudio.play().then(() => {
-                    playRainBtn.innerText = '暂停';
-                }).catch(err => {
-                    console.log("音频播放受限制（需要与网页进行交互后才允许自动播放）: ", err);
-                });
-            } else {
-                rainAudio.pause();
-                playRainBtn.innerText = '播放';
-            }
+        // 进入全屏预览
+        previewBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡到 wrapper
+            isPreviewMode = true;
+            controlPanel.style.opacity = '0';
+            controlPanel.style.transform = 'translate(-50%, 20px)';
+            setTimeout(() => {
+                controlPanel.style.display = 'none';
+                exitPreviewBtn.style.display = 'block';
+            }, 300);
         });
 
-        rainVolumeSlider.addEventListener('input', (e) => {
-            rainAudio.volume = parseFloat(e.target.value);
+        // 退出全屏预览的函数
+        function exitPreview() {
+            isPreviewMode = false;
+            exitPreviewBtn.style.display = 'none';
+            controlPanel.style.display = 'block';
+            // 稍作延迟让 display 生效，再进行渐显过渡
+            setTimeout(() => {
+                controlPanel.style.opacity = '1';
+                controlPanel.style.transform = 'translate(-50%, 0)';
+            }, 10);
+        }
+
+        // 点击右上角退出按钮
+        exitPreviewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exitPreview();
         });
 
-        playMusicBtn.addEventListener('click', () => {
-            if (musicAudio.paused) {
-                musicAudio.play().then(() => {
-                    playMusicBtn.innerText = '暂停';
-                }).catch(err => {
-                    console.log("音频播放受限制: ", err);
-                });
-            } else {
-                musicAudio.pause();
-                playMusicBtn.innerText = '播放';
+        // 点击 3:4 画面任意位置也可以退出预览
+        wrapper.addEventListener('click', () => {
+            if (isPreviewMode) {
+                exitPreview();
             }
-        });
-
-        musicVolumeSlider.addEventListener('input', (e) => {
-            musicAudio.volume = parseFloat(e.target.value);
-        });
-
-        // --- 视频录制核心逻辑 ---
-        const recordBtn = document.getElementById('recordBtn');
-        let isRecording = false;
-
-        recordBtn.addEventListener('click', () => {
-            if (isRecording) return;
-            isRecording = true;
-            recordBtn.disabled = true;
-
-            const chunks = [];
-            const stream = canvas.captureStream(30); 
-
-            let options = { mimeType: 'video/webm; codecs=vp9' };
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options = { mimeType: 'video/webm; codecs=vp8' };
-            }
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options = { mimeType: 'video/webm' };
-            }
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options = { mimeType: 'video/mp4' }; 
-            }
-
-            let mediaRecorder;
-            try {
-                mediaRecorder = new MediaRecorder(stream, options);
-            } catch (e) {
-                mediaRecorder = new MediaRecorder(stream); 
-            }
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) {
-                    chunks.push(e.data); 
-                }
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `rain_clip_${Date.now()}.webm`; 
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                recordBtn.innerText = '录制并下载 8 秒视频';
-                recordBtn.disabled = false;
-                isRecording = false;
-            };
-
-            mediaRecorder.start();
-
-            let timeLeft = 8;
-            recordBtn.innerText = `录制中 (${timeLeft}s)...`;
-
-            const timer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft > 0) {
-                    recordBtn.innerText = `录制中 (${timeLeft}s)...`;
-                } else {
-                    clearInterval(timer);
-                    recordBtn.innerText = '正在生成视频文件...';
-                    mediaRecorder.stop(); 
-                }
-            }, 1000);
         });
 
         animate();
