@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3:4 斑马线雨景特效</title>
+    <title>3:4 斑马线雨景动效</title>
     <style>
         * {
             margin: 0;
@@ -23,19 +23,31 @@
             align-items: center;
         }
 
-        /* 3:4 比例竖版主容器 */
+        /* 3:4 比例主容器 */
         .viewport-wrapper {
             position: relative;
             width: 100%;
             height: 100%;
-            max-width: 75vh;       /* 3:4 比例几何校正 */
-            max-height: 133.33vw;  /* 3:4 比例几何校正 */
+            max-width: 75vh;       /* 3:4 比例精确校正 */
+            max-height: 133.33vw;  /* 3:4 比例精确校正 */
             aspect-ratio: 3 / 4;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             overflow: hidden;
             background-color: #151515;
             border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* 全屏预览模式下的容器样式 */
+        .viewport-wrapper.fullscreen-mode {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            aspect-ratio: auto !important;
+            border-radius: 0 !important;
+            border: none !important;
         }
 
         /* 背景容器 */
@@ -48,8 +60,9 @@
             background-image: url('https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80');
             background-size: cover;
             background-position: center;
-            filter: brightness(1.0) contrast(1.1) saturate(0.9); /* 默认背景亮度 1.0 */
-            transition: filter 0.1s ease, background-image 0.5s ease;
+            /* 默认背景亮度为 1.0 */
+            filter: brightness(1.0) contrast(1.1) saturate(0.9); 
+            transition: filter 0.1s ease;
             z-index: 1;
         }
 
@@ -64,67 +77,65 @@
             pointer-events: none;
         }
 
-        /* 轻量化控制面板：固定放在画面下方 */
+        /* 针对手机H5优化的顶部半透明控制面板 */
         .control-panel {
             position: absolute;
-            bottom: 15px; /* 贴紧 3:4 画面的最下方 */
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0;
+            left: 0;
+            width: 100%;
             z-index: 10;
-            background: rgba(18, 18, 22, 0.85);
+            background: rgba(18, 18, 22, 0.55);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            padding: 12px;
-            border-radius: 8px;
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 16px;
             color: #e5e5e5;
-            width: calc(100% - 30px); /* 在手机上两侧留白 */
-            max-width: 270px; /* 控制框变窄变小 */
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        .control-panel h3 {
+        /* 全屏时隐藏控制面板 */
+        .control-panel.hidden {
+            transform: translateY(-100%);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .panel-header h3 {
             font-size: 13px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 4px;
             font-weight: 500;
-            text-align: center;
             letter-spacing: 0.5px;
+            color: #fff;
+        }
+
+        /* 双列网格布局，节约垂直高度 */
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 16px;
         }
 
         .control-group {
-            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
         }
 
         .control-group label {
             display: block;
-            font-size: 11px;
-            color: #aaa;
+            font-size: 10px;
+            color: #b0b0b5;
             margin-bottom: 4px;
         }
 
-        .file-upload-btn {
-            display: block;
-            width: 100%;
-            padding: 6px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            text-align: center;
-            cursor: pointer;
+        .value-display {
+            float: right;
             font-size: 10px;
-            color: #ddd;
-            transition: all 0.2s;
-        }
-
-        .file-upload-btn:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .file-upload-btn input[type="file"] {
-            display: none;
+            color: #fff;
+            font-weight: 500;
         }
 
         input[type="range"] {
@@ -143,101 +154,94 @@
             border-radius: 50%;
             background: #ffffff;
             cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        .value-display {
-            float: right;
-            font-size: 11px;
-            color: #888;
-        }
-
-        /* 全屏预览按钮 */
-        .preview-btn {
-            display: block;
-            width: 100%;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 4px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
+        /* 按钮通用设计 */
+        .ui-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
-            margin-top: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .preview-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
+        .ui-btn:hover {
+            background: rgba(255, 255, 255, 0.22);
+            border-color: rgba(255, 255, 255, 0.4);
         }
 
-        /* 退出预览悬浮按钮 */
-        #exitPreviewBtn {
+        /* 悬浮退出全屏按钮 */
+        .exit-preview-btn {
             position: absolute;
             top: 15px;
             right: 15px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 10px;
+            background: rgba(15, 15, 15, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #eee;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
             cursor: pointer;
             display: none;
-            backdrop-filter: blur(5px);
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
-        #exitPreviewBtn:hover {
-            background: rgba(0, 0, 0, 0.85);
+        .exit-preview-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
         }
     </style>
 </head>
 <body>
 
     <!-- 3:4 主画面容器 -->
-    <div class="viewport-wrapper">
+    <div class="viewport-wrapper" id="viewportWrapper">
         <div id="bg-container"></div>
         <canvas id="rainCanvas"></canvas>
+        
+        <!-- 悬浮退出预览按钮 -->
+        <button class="exit-preview-btn" id="exitPreviewBtn">退出全屏</button>
 
-        <!-- 退出预览轻量按钮（默认隐藏） -->
-        <button id="exitPreviewBtn">退出预览</button>
-
-        <!-- 悬浮控制面板：置于主容器内部，自适应贴底 -->
-        <div class="control-panel">
-            <h3>雨景控制台</h3>
+        <!-- 顶部半透明控制面板 -->
+        <div class="control-panel" id="controlPanel">
+            <div class="panel-header">
+                <h3>雨景动效配置</h3>
+                <button class="ui-btn" id="previewBtn">全屏预览</button>
+            </div>
             
-            <!-- 背景图替换 -->
-            <div class="control-group">
-                <label>替换背景图片</label>
-                <label class="file-upload-btn">
-                    选择本地图片
-                    <input type="file" id="bgUploader" accept="image/*">
-                </label>
-            </div>
+            <div class="control-grid">
+                <!-- 背景亮度 -->
+                <div class="control-group">
+                    <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
+                    <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
+                </div>
 
-            <!-- 背景明暗调节 -->
-            <div class="control-group">
-                <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
-                <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
-            </div>
+                <!-- 起始高度 -->
+                <div class="control-group">
+                    <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
+                    <input type="range" id="landingStart" min="0" max="100" value="12">
+                </div>
 
-            <!-- 落雨起始高度 -->
-            <div class="control-group">
-                <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
-                <input type="range" id="landingStart" min="0" max="100" value="12">
-            </div>
+                <!-- 图案透明度 -->
+                <div class="control-group">
+                    <label>图案透明度 <span class="value-display" id="opacityVal">1.00</span></label>
+                    <input type="range" id="patternOpacity" min="0.1" max="1.0" step="0.05" value="1.00">
+                </div>
 
-            <!-- 落雨结束高度 -->
-            <div class="control-group">
-                <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
-                <input type="range" id="landingEnd" min="0" max="100" value="100">
+                <!-- 结束高度 -->
+                <div class="control-group">
+                    <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
+                    <input type="range" id="landingEnd" min="0" max="100" value="100">
+                </div>
             </div>
-
-            <!-- 预览按钮 -->
-            <button class="preview-btn" id="previewBtn">全屏预览</button>
         </div>
     </div>
 
@@ -245,32 +249,35 @@
         const canvas = document.getElementById('rainCanvas');
         const ctx = canvas.getContext('2d');
         const bgContainer = document.getElementById('bg-container');
-        const wrapper = document.querySelector('.viewport-wrapper');
+        const wrapper = document.getElementById('viewportWrapper');
+        const controlPanel = document.getElementById('controlPanel');
+        const previewBtn = document.getElementById('previewBtn');
+        const exitPreviewBtn = document.getElementById('exitPreviewBtn');
 
-        // 【锁定为默认参数 - 用户不可更改】
-        const globalPatternOpacity = 1.00;     // 图案透明度 1.00
-        const rainDensity = 30;                 // 下雨密度 30
-        const rainSpeedMultiplier = 1.0;       // 雨滴下落速度 1.0
-        const baseRainLength = 30;             // 雨丝长度 30
-        const baseRainWidth = 1.5;             // 雨丝粗细 1.5
-        const baseRippleSize = 110;            // 椭圆基础大小 110
-        const rippleSizeRandomness = 100;      // 大小随机度 100
-        const rainUniformity = 0.35;           // 分布均匀度 0.35
+        // 用户可调参数（及设定的默认初始值）
+        let currentBgBrightness = 1.00; 
+        let landingStartRatio = 0.12;   
+        let landingEndRatio = 1.00;     
+        let globalPatternOpacity = 1.00; 
 
-        // 【允许用户更改的参数初始化】
-        let currentBgBrightness = 1.00;        // 背景亮度 1.00
-        let landingStartRatio = 0.12;          // 落雨起始高度 12% (0.12)
-        let landingEndRatio = 1.00;            // 落雨结束高度 100% (1.00)
+        // 锁定参数（默认参数，用户不可调节）
+        const rainDensity = 30;         
+        const rainSpeedMultiplier = 1.0; 
+        const baseRainLength = 30;      
+        const baseRainWidth = 1.5;      
+        const baseRippleSize = 110;     
+        const rippleSizeRandomness = 100;
+        const rainUniformity = 0.35;    
 
-        // 【锁定固定图片名】
-        const patternNames = [
+        // 指定的 5 张固定本地图案文件名
+        const fixedPatternNames = [
             'eggtart.png',
             'original.png',
             'chicken_wings.png',
             'chicken_popcorn.png',
             'chicken_nuggets.png'
         ];
-        const fixedPatterns = []; 
+        const loadedPatterns = [];
 
         const raindrops = [];
         const ripples = [];
@@ -301,13 +308,13 @@
             splashes.length = 0;
             adjustRainDensity();
         }
-        
-        // 预加载固定图案
-        function preloadFixedPatterns() {
-            patternNames.forEach(name => {
+
+        // 初始化加载固定的本地图案
+        function initFixedPatterns() {
+            fixedPatternNames.forEach(name => {
                 const img = new Image();
-                img.src = name;
-                fixedPatterns.push(img);
+                img.src = name; // 读取本地同级目录下文件
+                loadedPatterns.push(img);
             });
         }
 
@@ -352,10 +359,10 @@
                 this.growthSpeed = (0.018 * this.maxRadiusX + 0.4) * scale; 
                 this.alpha = 1.0;
 
+                // 2/3 概率生成内部图案
                 this.hasPattern = Math.random() < 0.666;
-                if (this.hasPattern && fixedPatterns.length > 0) {
-                    // ★★★ 【修复处】：修正了 pool 拼写，改回 fixedPatterns ★★★
-                    this.patternImg = fixedPatterns[Math.floor(Math.random() * fixedPatterns.length)];
+                if (this.hasPattern && loadedPatterns.length > 0) {
+                    this.patternImg = loadedPatterns[Math.floor(Math.random() * loadedPatterns.length)];
                 }
             }
 
@@ -380,6 +387,7 @@
                 const flattenRatio = 0.45;
                 const radiusY = this.radiusX * flattenRatio;
 
+                // 绘制外层细描边椭圆
                 ctx.save();
                 ctx.beginPath();
                 ctx.ellipse(this.x, this.y, this.radiusX, radiusY, 0, 0, Math.PI * 2);
@@ -388,27 +396,38 @@
                 ctx.stroke();
                 ctx.restore();
 
-                if (this.hasPattern && this.patternImg && this.patternImg.complete) {
-                    ctx.save();
-                    
-                    const innerRadiusX = this.radiusX * 0.67;
-                    const innerRadiusY = radiusY * 0.67;
+                // 绘制内层 2/3 大小的椭圆图案
+                if (this.hasPattern && this.patternImg) {
+                    // 安全检测：如果图片已存在且加载完成，则渲染图片；否则渲染一个虚线圆作为占位降级
+                    if (this.patternImg.complete && this.patternImg.naturalWidth !== 0) {
+                        ctx.save();
+                        const innerRadiusX = this.radiusX * 0.67;
+                        const innerRadiusY = radiusY * 0.67;
 
-                    ctx.beginPath();
-                    ctx.ellipse(this.x, this.y, innerRadiusX, innerRadiusY, 0, 0, Math.PI * 2);
-                    ctx.clip(); 
+                        ctx.beginPath();
+                        ctx.ellipse(this.x, this.y, innerRadiusX, innerRadiusY, 0, 0, Math.PI * 2);
+                        ctx.clip(); 
 
-                    ctx.globalAlpha = this.alpha * globalPatternOpacity;
-                    
-                    ctx.drawImage(
-                        this.patternImg, 
-                        this.x - innerRadiusX, 
-                        this.y - innerRadiusY, 
-                        innerRadiusX * 2, 
-                        innerRadiusY * 2
-                    );
-
-                    ctx.restore();
+                        ctx.globalAlpha = this.alpha * globalPatternOpacity;
+                        ctx.drawImage(
+                            this.patternImg, 
+                            this.x - innerRadiusX, 
+                            this.y - innerRadiusY, 
+                            innerRadiusX * 2, 
+                            innerRadiusY * 2
+                        );
+                        ctx.restore();
+                    } else {
+                        // 占位椭圆：当同级目录下无对应图片文件时自动绘制，避免黑屏报错
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.ellipse(this.x, this.y, this.radiusX * 0.67, radiusY * 0.67, 0, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${this.alpha * 0.25 * globalPatternOpacity})`;
+                        ctx.setLineDash([2, 4]);
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
                 }
             }
         }
@@ -433,10 +452,10 @@
 
                 const baseHorizon = vHeight * 0.05; 
                 const divisor = vHeight - baseHorizon;
-                // 加入 Math.max 防止高度差异常导致 depthScale 产生负数或 NaN
-                const depthScale = divisor > 0 ? Math.max(0, (this.targetY - baseHorizon) / divisor) : 0;
+                const depthScale = divisor > 0 ? (this.targetY - baseHorizon) / divisor : 0;
                 this.scale = 0.35 + depthScale * 0.65; 
 
+                // 网格通道均匀分布计算
                 const randomX = Math.random() * vWidth; 
                 const slotWidth = vWidth / rainDensity; 
                 const slotX = (this.index + Math.random()) * slotWidth; 
@@ -445,7 +464,7 @@
                 this.y = -100; 
                 const dy = this.targetY - this.y;
                 const dx = dy * Math.sin(this.angle);
-                this.x = this.targetX - dx;
+                this.x = this.targetX - dx; 
 
                 this.length = (baseRainLength + Math.random() * (baseRainLength * 0.5)) * this.scale;
                 this.width = baseRainWidth * this.scale;
@@ -504,61 +523,46 @@
         }
 
         function animate() {
-            try {
-                ctx.clearRect(0, 0, vWidth, vHeight);
+            ctx.clearRect(0, 0, vWidth, vHeight);
 
-                // 1. 绘制雨丝
-                for (let i = 0; i < raindrops.length; i++) {
-                    raindrops[i].update();
-                    raindrops[i].draw();
-                }
+            // 1. 绘制雨丝
+            for (let i = 0; i < raindrops.length; i++) {
+                raindrops[i].update();
+                raindrops[i].draw();
+            }
 
-                // 2. 绘制水花
-                for (let i = splashes.length - 1; i >= 0; i--) {
-                    const sp = splashes[i];
-                    sp.update();
-                    sp.draw();
-                    if (sp.alpha <= 0) {
-                        splashes.splice(i, 1);
-                    }
+            // 2. 绘制水花
+            for (let i = splashes.length - 1; i >= 0; i--) {
+                const sp = splashes[i];
+                sp.update();
+                sp.draw();
+                if (sp.alpha <= 0) {
+                    splashes.splice(i, 1);
                 }
+            }
 
-                // 3. 绘制椭圆涟漪
-                for (let i = ripples.length - 1; i >= 0; i--) {
-                    const r = ripples[i];
-                    r.update();
-                    r.draw();
-                    if (r.alpha <= 0) {
-                        ripples.splice(i, 1);
-                    }
+            // 3. 绘制椭圆涟漪
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.update();
+                r.draw();
+                if (r.alpha <= 0) {
+                    ripples.splice(i, 1);
                 }
-            } catch (e) {
-                console.error("渲染帧发生异常: ", e);
             }
 
             requestAnimationFrame(animate);
         }
 
-        // --- 初始化与绑定事件 ---
+        // --- 初始化运行 ---
 
-        preloadFixedPatterns();
+        initFixedPatterns();
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // 替换背景
-        const bgUploader = document.getElementById('bgUploader');
-        bgUploader.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    bgContainer.style.backgroundImage = `url('${event.target.result}')`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        // --- 交互及控制绑定 ---
 
-        // 背景明暗调节
+        // 1. 背景亮度调节
         const bgBrightnessSlider = document.getElementById('bgBrightness');
         const bgBrightnessVal = document.getElementById('bgBrightnessVal');
         bgBrightnessSlider.addEventListener('input', function(e) {
@@ -567,7 +571,7 @@
             bgContainer.style.filter = `brightness(${currentBgBrightness}) contrast(1.1) saturate(0.9)`;
         });
 
-        // 落雨起始高度调节
+        // 2. 落雨起始位置调节
         const landingStartSlider = document.getElementById('landingStart');
         const landingStartVal = document.getElementById('landingStartVal');
         landingStartSlider.addEventListener('input', function(e) {
@@ -575,7 +579,7 @@
             landingStartVal.innerText = e.target.value + '%';
         });
 
-        // 落雨结束高度调节
+        // 3. 落雨结束位置调节
         const landingEndSlider = document.getElementById('landingEnd');
         const landingEndVal = document.getElementById('landingEndVal');
         landingEndSlider.addEventListener('input', function(e) {
@@ -583,47 +587,28 @@
             landingEndVal.innerText = e.target.value + '%';
         });
 
-        // --- 全屏预览与退出逻辑 ---
-        const previewBtn = document.getElementById('previewBtn');
-        const exitPreviewBtn = document.getElementById('exitPreviewBtn');
-        const controlPanel = document.querySelector('.control-panel');
-        let isPreviewMode = false;
-
-        // 进入全屏预览
-        previewBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 阻止事件冒泡到 wrapper
-            isPreviewMode = true;
-            controlPanel.style.opacity = '0';
-            controlPanel.style.transform = 'translate(-50%, 20px)';
-            setTimeout(() => {
-                controlPanel.style.display = 'none';
-                exitPreviewBtn.style.display = 'block';
-            }, 300);
+        // 4. 图案不透明度调节
+        const opacitySlider = document.getElementById('patternOpacity');
+        const opacityVal = document.getElementById('opacityVal');
+        opacitySlider.addEventListener('input', function(e) {
+            globalPatternOpacity = parseFloat(e.target.value);
+            opacityVal.innerText = globalPatternOpacity.toFixed(2);
         });
 
-        // 退出全屏预览的函数
-        function exitPreview() {
-            isPreviewMode = false;
+        // 5. 全屏预览控制
+        previewBtn.addEventListener('click', () => {
+            wrapper.classList.add('fullscreen-mode');
+            controlPanel.classList.add('hidden');
+            exitPreviewBtn.style.display = 'block';
+            setTimeout(resizeCanvas, 320); // 等待容器过渡动画结束后重建轨迹
+        });
+
+        // 6. 退出全屏预览控制
+        exitPreviewBtn.addEventListener('click', () => {
+            wrapper.classList.remove('fullscreen-mode');
+            controlPanel.classList.remove('hidden');
             exitPreviewBtn.style.display = 'none';
-            controlPanel.style.display = 'block';
-            // 稍作延迟让 display 生效，再进行渐显过渡
-            setTimeout(() => {
-                controlPanel.style.opacity = '1';
-                controlPanel.style.transform = 'translate(-50%, 0)';
-            }, 10);
-        }
-
-        // 点击右上角退出按钮
-        exitPreviewBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            exitPreview();
-        });
-
-        // 点击 3:4 画面任意位置也可以退出预览
-        wrapper.addEventListener('click', () => {
-            if (isPreviewMode) {
-                exitPreview();
-            }
+            setTimeout(resizeCanvas, 320);
         });
 
         animate();
