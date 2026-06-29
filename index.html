@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3:4 斑马线雨景特效（带音频录制版）</title>
+    <title>3:4 斑马线雨景特效</title>
     <style>
         * {
             margin: 0;
@@ -48,7 +48,7 @@
             background-image: url('https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80');
             background-size: cover;
             background-position: center;
-            filter: brightness(1.0) contrast(1.1) saturate(0.9); 
+            filter: brightness(1.0) contrast(1.1) saturate(0.9); /* 默认背景亮度修改为 1.0 */
             transition: filter 0.1s ease, background-image 0.5s ease;
             z-index: 1;
         }
@@ -185,24 +185,6 @@
             border-color: rgba(255, 255, 255, 0.4);
         }
 
-        /* 预览/标签样式 */
-        .preview-container {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            margin-top: 6px;
-            max-height: 80px;
-            overflow-y: auto;
-        }
-
-        .preview-tag {
-            font-size: 9px;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 2px 5px;
-            border-radius: 3px;
-            color: #bbb;
-        }
-
         /* 录制按钮设计 */
         .record-btn {
             display: block;
@@ -239,9 +221,9 @@
         <canvas id="rainCanvas"></canvas>
     </div>
 
-    <!-- 音频资源（预加载并循环播放，使用 crossOrigin 防止录制时产生跨域报错） -->
-    <audio id="rainAudio" src="rain.mp3" loop crossorigin="anonymous"></audio>
-    <audio id="musicAudio" src="music.mp3" loop crossorigin="anonymous"></audio>
+    <!-- 音频资源（预加载并循环播放） -->
+    <audio id="rainAudio" src="rain.mp3" loop></audio>
+    <audio id="musicAudio" src="music.mp3" loop></audio>
 
     <!-- 悬浮控制面板 -->
     <div class="control-panel">
@@ -256,13 +238,13 @@
             </label>
         </div>
 
-        <!-- 背景明暗调节（用户可改） -->
+        <!-- 背景明暗调节 -->
         <div class="control-group">
             <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
             <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
         </div>
 
-        <!-- 落雨空间范围控制（用户可改） -->
+        <!-- 落雨空间范围控制 -->
         <div class="control-group">
             <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
             <input type="range" id="landingStart" min="0" max="100" value="12">
@@ -270,18 +252,6 @@
         <div class="control-group">
             <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
             <input type="range" id="landingEnd" min="0" max="100" value="100">
-        </div>
-
-        <!-- 当前生效的图片列表展示（新增显示，方便在UI中确认名字） -->
-        <div class="control-group" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
-            <label>当前生效的落雨图案：</label>
-            <div class="preview-container">
-                <span class="preview-tag">eggtart.png</span>
-                <span class="preview-tag">original t.png</span>
-                <span class="preview-tag">chicken_wings.png</span>
-                <span class="preview-tag">chicken_popcorn.png</span>
-                <span class="preview-tag">chicken_nuggets.png</span>
-            </div>
         </div>
 
         <!-- 音频控制区域 -->
@@ -302,7 +272,7 @@
         </div>
 
         <!-- 视频下载按钮 -->
-        <button class="record-btn" id="recordBtn">录制并下载 8 秒带音乐视频</button>
+        <button class="record-btn" id="recordBtn">录制并下载 8 秒视频</button>
     </div>
 
     <script>
@@ -311,29 +281,35 @@
         const bgContainer = document.getElementById('bg-container');
         const wrapper = document.querySelector('.viewport-wrapper');
 
-        // 【锁定默认参数】
-        const globalPatternOpacity = 1.00;     
-        const rainDensity = 30;                 
-        const rainSpeedMultiplier = 1.0;       
-        const baseRainLength = 30;             
-        const baseRainWidth = 1.5;             
-        const baseRippleSize = 110;            
-        const rippleSizeRandomness = 100;      
-        const rainUniformity = 0.35;           
+        // 【锁定为默认参数 - 用户不可更改】
+        const globalPatternOpacity = 1.00;     // 图案透明度默认 1.00
+        const rainDensity = 30;                 // 下雨密度默认 30
+        const rainSpeedMultiplier = 1.0;       // 雨滴下落速度默认 1.0
+        const baseRainLength = 30;             // 雨丝长度默认 30
+        const baseRainWidth = 2;             // 雨丝粗细默认 1.5
+        const baseRippleSize = 110;            // 椭圆基础大小默认 110
+        const rippleSizeRandomness = 100;      // 大小随机度默认 100
+        const rainUniformity = 0.35;           // 默认降落分布均匀度保持 0.35
 
-        // 【允许用户更改的参数】
-        let currentBgBrightness = 1.00;        
-        let landingStartRatio = 0.12;          
-        let landingEndRatio = 1.00;            
+        // 【允许用户更改的参数初始化】
+        let currentBgBrightness = 1.00;        // 背景亮度默认 1.00
+        let landingStartRatio = 0.12;          // 落雨起始高度默认 12% (0.12)
+        let landingEndRatio = 1.00;            // 落雨结束高度默认 100% (1.00)
 
-        // 【锁定固定图案文件名】
+
+        // =======================================================
+        // ★★★ 这里就是您要求的 5 个固定图片文件名，请确保拼写一致 ★★★
+        // =======================================================
         const patternNames = [
             'eggtart.png',
-            'original t.png',
+            'original.png',
             'chicken_wings.png',
             'chicken_popcorn.png',
             'chicken_nuggets.png'
         ];
+        // =======================================================
+
+
         const fixedPatterns = []; 
 
         const raindrops = [];
@@ -343,12 +319,6 @@
         let dpr = window.devicePixelRatio || 1;
         let vWidth = 300;  
         let vHeight = 400; 
-
-        // 混音录制所需的 Web Audio 全局节点
-        let audioCtx = null;
-        let destNode = null;
-        let rainSource = null;
-        let musicSource = null;
 
         function resizeCanvas() {
             dpr = window.devicePixelRatio || 1;
@@ -379,31 +349,6 @@
                 img.src = name;
                 fixedPatterns.push(img);
             });
-        }
-
-        // 初始化混音录制节点（用户产生交互后执行，规避浏览器限制政策）
-        function ensureAudioContext() {
-            if (!audioCtx) {
-                try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    destNode = audioCtx.createMediaStreamDestination(); // 虚拟音频流节点
-
-                    // 连接雨声音频
-                    rainSource = audioCtx.createMediaElementSource(rainAudio);
-                    rainSource.connect(audioCtx.destination); // 连到扬声器，保证用户能听到
-                    rainSource.connect(destNode);            // 连到虚拟节点，用于合并录音
-
-                    // 连接背景音乐音频
-                    musicSource = audioCtx.createMediaElementSource(musicAudio);
-                    musicSource.connect(audioCtx.destination); // 连到扬声器，保证用户能听到
-                    musicSource.connect(destNode);            // 连到虚拟节点，用于合并录音
-                } catch (e) {
-                    console.warn("混音节点初始化失败或已被连接:", e);
-                }
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
         }
 
         // 水花颗粒
@@ -447,8 +392,10 @@
                 this.growthSpeed = (0.018 * this.maxRadiusX + 0.4) * scale; 
                 this.alpha = 1.0;
 
+                // 2/3 概率生成内部图案
                 this.hasPattern = Math.random() < 0.666;
                 if (this.hasPattern && fixedPatterns.length > 0) {
+                    // 从上面定义的 5 张固定图案库中随机选择
                     this.patternImg = fixedPatterns[Math.floor(Math.random() * fixedPatterns.length)];
                 }
             }
@@ -672,7 +619,7 @@
             landingEndVal.innerText = e.target.value + '%';
         });
 
-        // --- 音频控制与合流绑定逻辑 ---
+        // --- 音频控制逻辑 ---
         const rainAudio = document.getElementById('rainAudio');
         const musicAudio = document.getElementById('musicAudio');
         
@@ -682,15 +629,17 @@
         const playMusicBtn = document.getElementById('playMusicBtn');
         const musicVolumeSlider = document.getElementById('musicVolume');
 
+        // 设置默认音量并使音频节点与滑块保持一致
         rainAudio.volume = parseFloat(rainVolumeSlider.value);
         musicAudio.volume = parseFloat(musicVolumeSlider.value);
 
         playRainBtn.addEventListener('click', () => {
-            ensureAudioContext(); // 交互时触发混音节点连接
             if (rainAudio.paused) {
                 rainAudio.play().then(() => {
                     playRainBtn.innerText = '暂停';
-                }).catch(err => console.log(err));
+                }).catch(err => {
+                    console.log("音频播放受限制（需要与网页进行交互后才允许自动播放）: ", err);
+                });
             } else {
                 rainAudio.pause();
                 playRainBtn.innerText = '播放';
@@ -702,11 +651,12 @@
         });
 
         playMusicBtn.addEventListener('click', () => {
-            ensureAudioContext(); // 交互时触发混音节点连接
             if (musicAudio.paused) {
                 musicAudio.play().then(() => {
                     playMusicBtn.innerText = '暂停';
-                }).catch(err => console.log(err));
+                }).catch(err => {
+                    console.log("音频播放受限制: ", err);
+                });
             } else {
                 musicAudio.pause();
                 playMusicBtn.innerText = '播放';
@@ -717,36 +667,17 @@
             musicAudio.volume = parseFloat(e.target.value);
         });
 
-        // --- 音视频合流录制核心逻辑 ---
+        // --- 视频录制核心逻辑 ---
         const recordBtn = document.getElementById('recordBtn');
         let isRecording = false;
 
         recordBtn.addEventListener('click', () => {
             if (isRecording) return;
-            
-            // 确保在录像启动时激活 AudioContext，获取干净的混音输入
-            ensureAudioContext(); 
-            
             isRecording = true;
             recordBtn.disabled = true;
 
             const chunks = [];
-            
-            // 1. 获取 Canvas 视频轨道
-            const canvasStream = canvas.captureStream(30); 
-            const videoTrack = canvasStream.getVideoTracks()[0];
-
-            // 2. 建立联合输出流
-            const combinedStream = new MediaStream();
-            combinedStream.addTrack(videoTrack);
-
-            // 3. 【核心技术】：抓取混合了雨声和BGM音频的虚拟音频流轨道
-            if (destNode && destNode.stream) {
-                const audioTracks = destNode.stream.getAudioTracks();
-                if (audioTracks.length > 0) {
-                    combinedStream.addTrack(audioTracks[0]); // 将混音轨道合并入视频文件中 [1]
-                }
-            }
+            const stream = canvas.captureStream(30); 
 
             let options = { mimeType: 'video/webm; codecs=vp9' };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
@@ -761,9 +692,9 @@
 
             let mediaRecorder;
             try {
-                mediaRecorder = new MediaRecorder(combinedStream, options);
+                mediaRecorder = new MediaRecorder(stream, options);
             } catch (e) {
-                mediaRecorder = new MediaRecorder(combinedStream); 
+                mediaRecorder = new MediaRecorder(stream); 
             }
 
             mediaRecorder.ondataavailable = (e) => {
@@ -777,13 +708,13 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `rain_with_sound_${Date.now()}.webm`; 
+                a.download = `rain_clip_${Date.now()}.webm`; 
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                recordBtn.innerText = '录制并下载 8 秒带音乐视频';
+                recordBtn.innerText = '录制并下载 8 秒视频';
                 recordBtn.disabled = false;
                 isRecording = false;
             };
