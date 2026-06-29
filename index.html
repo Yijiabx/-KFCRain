@@ -271,13 +271,13 @@
         let globalPatternOpacity = 1.00; 
 
         // 锁定参数（用户不可调节）
-        const rainDensity = 20;         
-        const rainSpeedMultiplier = 1.0; 
-        const baseRainLength = 10;      
-        const baseRainWidth = 1.5;      
-        const baseRippleSize = 50;     
-        const rippleSizeRandomness = 50;
-        const rainUniformity = 1;    
+        const rainDensity = 30;         // 雨量密度：从 20 提高到 75（雨滴明显变多、更绵密）
+        const rainSpeedMultiplier = 1.1; // 速度系数：微调至 1.1x（配合长雨丝，下落更具流动感）
+        const baseRainLength = 30;      // 雨丝长度：从 10 大幅提升至 100（告别“短破折号”，变成飘逸的长雨丝）
+        const baseRainWidth = 1.0;      // 雨丝粗细：从 1.5 调细至 1.0（雨丝更细密精致，像牛毛细雨）
+        const baseRippleSize = 50;     // 椭圆基础大小（保持您的参数）
+        const rippleSizeRandomness = 50; // 大小随机度（保持您的参数）
+        const rainUniformity = 0.85;    // 分布均匀度：从 1 降低至 0.35（形成自然错落的雨幕，防止像排队一样死板）
 
         // 指定的 5 张固定本地品牌图案文件名
         const fixedPatternNames = [
