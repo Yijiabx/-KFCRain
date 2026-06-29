@@ -1,0 +1,741 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉堡蛋挞雨 - 斑马线动效</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0b0d;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 3:4 比例竖版主容器 */
+        .viewport-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 75vh;       /* 3:4 比例几何校正 */
+            max-height: 133.33vw;  /* 3:4 比例几何校正 */
+            aspect-ratio: 3 / 4;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            background-color: #151515;
+            border-radius: 8px;
+        }
+
+        /* 背景容器 */
+        #bg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('./my_zebra.jpg'), url('https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            filter: brightness(1.0) contrast(1.1) saturate(0.9); /* 默认背景亮度 1.0 */
+            transition: filter 0.1s ease, background-image 0.5s ease;
+            z-index: 1;
+        }
+
+        /* 画布 */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            z-index: 10;
+            background: rgba(18, 18, 22, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 16px;
+            border-radius: 8px;
+            color: #e5e5e5;
+            width: 300px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 1200px) {
+            .control-panel {
+                position: fixed;
+                left: 10px;
+                top: 10px;
+                width: calc(100% - 20px);
+                max-width: 320px;
+            }
+        }
+
+        .control-panel h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 6px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .file-upload-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 11px;
+            color: #ddd;
+            transition: all 0.2s;
+        }
+
+        .file-upload-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .file-upload-btn input[type="file"] {
+            display: none;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        .value-display {
+            float: right;
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* 录制按钮设计 */
+        .record-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #e02424; 
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 15px;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+        }
+
+        .record-btn:hover {
+            background: #c81e1e;
+        }
+
+        .record-btn:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+        }
+
+        /* 音量开关按钮设计 */
+        .audio-toggle-btn {
+            display: block;
+            width: 100%;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .audio-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .audio-toggle-btn.playing {
+            background: #10b981; 
+            border-color: #059669;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3:4 主画面容器 -->
+    <div class="viewport-wrapper">
+        <div id="bg-container"></div>
+        <canvas id="rainCanvas"></canvas>
+    </div>
+
+    <!-- 隐藏的音频组件，指向您同级目录的文件 -->
+    <audio id="rainAudio" src="./rain.mp3" loop></audio>
+    <audio id="musicAudio" src="./music.mp3" loop></audio>
+
+    <!-- 悬浮控制面板 -->
+    <div class="control-panel">
+        <h3>雨景控制台</h3>
+        
+        <!-- 背景图替换 -->
+        <div class="control-group">
+            <label>替换背景图片</label>
+            <label class="file-upload-btn">
+                选择本地背景图
+                <input type="file" id="bgUploader" accept="image/*">
+            </label>
+        </div>
+
+        <!-- 背景明暗调节 (可调，默认 1.00x) -->
+        <div class="control-group">
+            <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
+            <input type="range" id="bgBrightness" min="0.1" max="1.5" step="0.05" value="1.00">
+        </div>
+
+        <!-- 落雨起始高度 (可调，默认 12%) -->
+        <div class="control-group">
+            <label>落雨起始高度 <span class="value-display" id="landingStartVal">12%</span></label>
+            <input type="range" id="landingStart" min="0" max="100" value="12">
+        </div>
+
+        <!-- 落雨结束高度 (可调，默认 100%) -->
+        <div class="control-group">
+            <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
+            <input type="range" id="landingEnd" min="0" max="100" value="100">
+        </div>
+
+        <!-- 音效与背景音乐控制 (可调) -->
+        <div class="control-group">
+            <label>下雨声效 <span class="value-display" id="rainVolVal">50%</span></label>
+            <button class="audio-toggle-btn" id="toggleRainBtn">播放雨声</button>
+            <input type="range" id="rainVolume" min="0" max="1" step="0.05" value="0.5" style="margin-top: 6px;">
+        </div>
+        <div class="control-group">
+            <label>背景音乐 <span class="value-display" id="musicVolVal">50%</span></label>
+            <button class="audio-toggle-btn" id="toggleMusicBtn">播放音乐</button>
+            <input type="range" id="musicVolume" min="0" max="1" step="0.05" value="0.5" style="margin-top: 6px;">
+        </div>
+
+        <!-- 视频下载按钮 -->
+        <button class="record-btn" id="recordBtn">录制并下载 8 秒视频</button>
+    </div>
+
+    <script>
+        // 固定 5 款预设美食图案文件名（空格标准替换为下划线，以防部分平台解析错误）
+        const MY_PRESET_IMAGES = [
+            './eggtart.png',
+            './original.png',
+            './chicken_wings.png',
+            './chicken_popcorn.png',
+            './chicken_nuggets.png'
+        ];
+
+        // 默认固定参数（锁死，不向用户提供调节，精简界面）
+        let globalPatternOpacity = 1.00; // 图案透明度 1.00
+        let rainDensity = 30;            // 下雨密度 30
+        let rainSpeedMultiplier = 1.0;   // 雨滴下落速度 1
+        let baseRippleSize = 110;         // 椭圆基础大小 110
+        let rippleSizeRandomness = 100;  // 大小随机度 100
+        let baseRainLength = 30;         // 雨丝长度 30
+        let baseRainWidth = 1.5;         // 雨丝粗细 1.5
+        let rainUniformity = 0.35;       // 均匀度 0.35
+
+        // 用户允许更改的参数初值
+        let currentBgBrightness = 1.00;  // 背景亮度 1.00
+        let landingStartRatio = 0.12;    // 落雨起始高度 12% (0.12)
+        let landingEndRatio = 1.00;      // 落雨结束高度 100% (1.00)
+        
+        const activePatterns = []; 
+        const raindrops = [];
+        const ripples = [];
+        const splashes = [];
+
+        let dpr = window.devicePixelRatio || 1;
+        let vWidth = 300;  
+        let vHeight = 400; 
+
+        function resizeCanvas() {
+            dpr = window.devicePixelRatio || 1;
+            const rect = wrapper.getBoundingClientRect();
+            
+            if (rect.width > 0 && rect.height > 0) {
+                vWidth = rect.width;
+                vHeight = rect.height;
+            } else {
+                vHeight = Math.min(window.innerHeight, window.innerWidth * 1.33);
+                vWidth = vHeight * 0.75;
+            }
+
+            canvas.width = vWidth * dpr;
+            canvas.height = vHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            raindrops.length = 0;
+            ripples.length = 0;
+            splashes.length = 0;
+            adjustRainDensity();
+        }
+        
+        // 加载美食图片
+        function loadCustomPresetImages() {
+            MY_PRESET_IMAGES.forEach((url) => {
+                const img = new Image();
+                img.src = url;
+                img.onload = () => {
+                    activePatterns.push(img);
+                };
+                img.onerror = () => {
+                    console.warn(`预设图案暂未加载: ${url}`);
+                };
+            });
+        }
+
+        // 水花颗粒
+        class SplashParticle {
+            constructor(x, y, scale) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 3.2 * scale;
+                this.vy = -(Math.random() * 2.8 + 1.6) * scale; 
+                this.gravity = 0.15; 
+                this.alpha = 1.0;
+                this.size = (Math.random() * 1.5 + 1.2) * scale;
+                this.fade = Math.random() * 0.04 + 0.03; 
+            }
+
+            update() {
+                this.x += this.vx * rainSpeedMultiplier; 
+                this.vy += this.gravity * rainSpeedMultiplier; 
+                this.y += this.vy * rainSpeedMultiplier;
+                this.alpha -= this.fade * rainSpeedMultiplier;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        // 椭圆涟漪
+        class Ripple {
+            constructor(x, y, scale) {
+                this.x = x;
+                this.y = y;
+                this.scale = scale; 
+                this.radiusX = 1; 
+                
+                this.maxRadiusX = (baseRippleSize + Math.random() * rippleSizeRandomness) * scale; 
+                this.growthSpeed = (0.018 * this.maxRadiusX + 0.4) * scale; 
+                this.alpha = 1.0;
+
+                this.hasPattern = Math.random() < 0.666;
+                if (this.hasPattern && activePatterns.length > 0) {
+                    this.patternImg = activePatterns[Math.floor(Math.random() * activePatterns.length)];
+                }
+            }
+
+            update() {
+                this.radiusX += this.growthSpeed * rainSpeedMultiplier; 
+                const maxR = this.maxRadiusX > 0 ? this.maxRadiusX : 1;
+                
+                const ratio = this.radiusX / maxR;
+                if (ratio >= 1) {
+                    this.alpha = 0;
+                } else if (ratio < 0.4) {
+                    this.alpha = 1.0;
+                } else {
+                    const fadeRatio = (ratio - 0.4) / 0.6;
+                    this.alpha = Math.cos(fadeRatio * Math.PI / 2);
+                }
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+
+                const flattenRatio = 0.45;
+                const radiusY = this.radiusX * flattenRatio;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.radiusX, radiusY, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${this.alpha * 0.65})`;
+                ctx.lineWidth = 1; 
+                ctx.stroke();
+                ctx.restore();
+
+                if (this.hasPattern && this.patternImg && this.patternImg.complete) {
+                    ctx.save();
+                    
+                    const innerRadiusX = this.radiusX * 0.67;
+                    const innerRadiusY = radiusY * 0.67;
+
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, innerRadiusX, innerRadiusY, 0, 0, Math.PI * 2);
+                    ctx.clip(); 
+
+                    ctx.globalAlpha = this.alpha * globalPatternOpacity;
+                    
+                    ctx.drawImage(
+                        this.patternImg, 
+                        this.x - innerRadiusX, 
+                        this.y - innerRadiusY, 
+                        innerRadiusX * 2, 
+                        innerRadiusY * 2
+                    );
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        // 雨滴
+        class Raindrop {
+            constructor(index) {
+                this.index = index;
+                this.reset(true); 
+            }
+
+            reset(initFully = false) {
+                this.angle = -Math.PI / 6; 
+
+                const horizonStart = vHeight * landingStartRatio;
+                const horizonEnd = vHeight * landingEndRatio;
+                const minH = Math.min(horizonStart, horizonEnd);
+                const maxH = Math.max(horizonStart, horizonEnd);
+                const heightDiff = maxH - minH;
+                
+                this.targetY = minH + Math.random() * (heightDiff > 0 ? heightDiff : 1);
+
+                const baseHorizon = vHeight * 0.05; 
+                const divisor = vHeight - baseHorizon;
+                const depthScale = divisor > 0 ? (this.targetY - baseHorizon) / divisor : 0;
+                this.scale = 0.35 + depthScale * 0.65; 
+
+                const randomX = Math.random() * vWidth; 
+                const slotWidth = vWidth / rainDensity; 
+                const slotX = (this.index + Math.random()) * slotWidth; 
+                this.targetX = randomX + (slotX - randomX) * rainUniformity;
+
+                this.y = -100; 
+                const dy = this.targetY - this.y;
+                const dx = dy * Math.sin(this.angle);
+                this.x = this.targetX - dx; 
+
+                this.length = (baseRainLength + Math.random() * (baseRainLength * 0.5)) * this.scale;
+                this.width = baseRainWidth * this.scale;
+                this.speedY = (14 + Math.random() * 8) * this.scale;
+                this.speedX = this.speedY * Math.sin(this.angle);
+                this.alpha = 0.15 + this.scale * 0.35;
+
+                if (initFully) {
+                    const progress = Math.random();
+                    this.y = this.y + progress * dy;
+                    this.x = this.x + progress * dx;
+                }
+            }
+
+            update() {
+                this.x += this.speedX * rainSpeedMultiplier;
+                this.y += this.speedY * rainSpeedMultiplier;
+
+                if (this.y >= this.targetY) {
+                    const count = Math.floor(Math.random() * 4) + 4;
+                    for (let i = 0; i < count; i++) {
+                        splashes.push(new SplashParticle(this.x, this.targetY, this.scale));
+                    }
+
+                    ripples.push(new Ripple(this.x, this.targetY, this.scale));
+                    this.reset(false);
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = `rgba(220, 230, 255, ${this.alpha})`;
+                ctx.lineWidth = this.width;
+                
+                ctx.moveTo(this.x, this.y);
+                const endX = this.x + this.length * Math.sin(this.angle);
+                const endY = this.y + this.length * Math.cos(this.angle);
+                ctx.lineTo(endX, endY);
+                
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function adjustRainDensity() {
+            while (raindrops.length < rainDensity) {
+                raindrops.push(new Raindrop(raindrops.length));
+            }
+            if (raindrops.length > rainDensity) {
+                raindrops.length = rainDensity;
+            }
+            for (let i = 0; i < raindrops.length; i++) {
+                raindrops[i].index = i;
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, vWidth, vHeight);
+
+            // 1. 绘制雨丝
+            for (let i = 0; i < raindrops.length; i++) {
+                raindrops[i].update();
+                raindrops[i].draw();
+            }
+
+            // 2. 绘制水花
+            for (let i = splashes.length - 1; i >= 0; i--) {
+                const sp = splashes[i];
+                sp.update();
+                sp.draw();
+                if (sp.alpha <= 0) {
+                    splashes.splice(i, 1);
+                }
+            }
+
+            // 3. 绘制椭圆涟漪
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.update();
+                r.draw();
+                if (r.alpha <= 0) {
+                    ripples.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // --- 初始化与加载（极其干净，没有残留任何未定义函数的调用，彻底修复不落雨问题） ---
+        loadCustomPresetImages(); 
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 替换背景事件
+        const bgUploader = document.getElementById('bgUploader');
+        bgUploader.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    bgContainer.style.backgroundImage = `url('${event.target.result}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 背景明暗调节
+        const bgBrightnessSlider = document.getElementById('bgBrightness');
+        const bgBrightnessVal = document.getElementById('bgBrightnessVal');
+        bgBrightnessSlider.addEventListener('input', function(e) {
+            currentBgBrightness = parseFloat(e.target.value);
+            bgBrightnessVal.innerText = currentBgBrightness.toFixed(2) + 'x';
+            bgContainer.style.filter = `brightness(${currentBgBrightness}) contrast(1.1) saturate(0.9)`;
+        });
+
+        // 雨滴落地起始高度
+        const landingStartSlider = document.getElementById('landingStart');
+        const landingStartVal = document.getElementById('landingStartVal');
+        landingStartSlider.addEventListener('input', function(e) {
+            landingStartRatio = parseInt(e.target.value, 10) / 100;
+            landingStartVal.innerText = e.target.value + '%';
+        });
+
+        // 雨滴落地结束高度
+        const landingEndSlider = document.getElementById('landingEnd');
+        const landingEndVal = document.getElementById('landingEndVal');
+        landingEndSlider.addEventListener('input', function(e) {
+            landingEndRatio = parseInt(e.target.value, 10) / 100;
+            landingEndVal.innerText = e.target.value + '%';
+        });
+
+        // 音效控制系统
+        const rainAudio = document.getElementById('rainAudio');
+        const musicAudio = document.getElementById('musicAudio');
+        
+        const toggleRainBtn = document.getElementById('toggleRainBtn');
+        const toggleMusicBtn = document.getElementById('toggleMusicBtn');
+        
+        const rainVolumeSlider = document.getElementById('rainVolume');
+        const musicVolumeSlider = document.getElementById('musicVolume');
+        
+        const rainVolVal = document.getElementById('rainVolVal');
+        const musicVolVal = document.getElementById('musicVolVal');
+
+        // 设置默认音量 50%
+        rainAudio.volume = 0.5;
+        musicAudio.volume = 0.5;
+
+        // 雨声播放/暂停
+        toggleRainBtn.addEventListener('click', () => {
+            if (rainAudio.paused) {
+                rainAudio.play().then(() => {
+                    toggleRainBtn.innerText = '暂停雨声';
+                    toggleRainBtn.classList.add('playing');
+                }).catch(err => console.log("环境声音频加载中，请部署后点击"));
+            } else {
+                rainAudio.pause();
+                toggleRainBtn.innerText = '播放雨声';
+                toggleRainBtn.classList.remove('playing');
+            }
+        });
+
+        // 雨声音量
+        rainVolumeSlider.addEventListener('input', (e) => {
+            const vol = parseFloat(e.target.value);
+            rainAudio.volume = vol;
+            rainVolVal.innerText = Math.round(vol * 100) + '%';
+        });
+
+        // 背景音乐播放/暂停
+        toggleMusicBtn.addEventListener('click', () => {
+            if (musicAudio.paused) {
+                musicAudio.play().then(() => {
+                    toggleMusicBtn.innerText = '暂停音乐';
+                    toggleMusicBtn.classList.add('playing');
+                }).catch(err => console.log("音乐音频加载中，请部署后点击"));
+            } else {
+                musicAudio.pause();
+                toggleMusicBtn.innerText = '播放音乐';
+                toggleMusicBtn.classList.remove('playing');
+            }
+        });
+
+        // 音乐音量
+        musicVolumeSlider.addEventListener('input', (e) => {
+            const vol = parseFloat(e.target.value);
+            musicAudio.volume = vol;
+            musicVolVal.innerText = Math.round(vol * 100) + '%';
+        });
+
+        // --- 视频录制逻辑 ---
+        const recordBtn = document.getElementById('recordBtn');
+        let isRecording = false;
+
+        recordBtn.addEventListener('click', () => {
+            if (isRecording) return;
+            isRecording = true;
+            recordBtn.disabled = true;
+
+            const chunks = [];
+            const stream = canvas.captureStream(30); 
+
+            let options = { mimeType: 'video/webm; codecs=vp9' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm; codecs=vp8' };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm' };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/mp4' }; 
+            }
+
+            let mediaRecorder;
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream); 
+            }
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    chunks.push(e.data); 
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rain_clip_${Date.now()}.webm`; 
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                recordBtn.innerText = '录制并下载 8 秒视频';
+                recordBtn.disabled = false;
+                isRecording = false;
+            };
+
+            mediaRecorder.start();
+
+            let timeLeft = 8;
+            recordBtn.innerText = `录制中 (${timeLeft}s)...`;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    recordBtn.innerText = `录制中 (${timeLeft}s)...`;
+                } else {
+                    clearInterval(timer);
+                    recordBtn.innerText = '正在生成视频文件...';
+                    mediaRecorder.stop(); 
+                }
+            }, 1000);
+        });
+
+        // 启动主渲染循环
+        animate();
+    </script>
+</body>
+</html>
+```
