@@ -1,10 +1,9 @@
-```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3:4 斑马线雨景动效</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>自适应雨景动效</title>
     <style>
         * {
             margin: 0;
@@ -23,20 +22,28 @@
             align-items: center;
         }
 
-        /* 3:4 比例主容器 */
+        /* 手机端：自适应撑满整个手机物理屏幕 */
         .viewport-wrapper {
             position: relative;
-            width: 100%;
-            height: 100%;
-            max-width: 75vh;       /* 3:4 比例精确校正 */
-            max-height: 133.33vw;  /* 3:4 比例精确校正 */
-            aspect-ratio: 3 / 4;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
             background-color: #151515;
-            border-radius: 8px;
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* 电脑端：自动模拟高屏手机居中卡片（iPhone 9:19.5 比例） */
+        @media (min-width: 769px) {
+            .viewport-wrapper {
+                width: 100%;
+                height: 100%;
+                max-width: 430px;       /* 模拟手机宽度 */
+                max-height: 932px;      /* 模拟手机高度 */
+                aspect-ratio: 9 / 19.5; /* 现代窄高屏比例 */
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 24px;
+                box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
+            }
         }
 
         /* 背景容器 */
@@ -46,12 +53,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* 默认背景图片修改为 my_zebra.png */
+            /* 默认背景图片为 my_zebra.png */
             background-image: url('my_zebra.png'); 
             background-size: cover;
             background-position: center;
+            /* 默认背景亮度参数 1.0 */
             filter: brightness(1.0) contrast(1.1) saturate(0.9); 
-            transition: filter 0.1s ease;
+            transition: filter 0.1s ease, background-image 0.5s ease;
             z-index: 1;
         }
 
@@ -66,17 +74,17 @@
             pointer-events: none;
         }
 
-        /* 移至画面下方的半透明控制面板 */
+        /* 底部半透明控制面板 */
         .control-panel {
             position: absolute;
-            bottom: 0; /* 控制面板移到画面下方 */
+            bottom: 0; 
             left: 0;
             width: 100%;
             z-index: 10;
             background: rgba(18, 18, 22, 0.55);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(255, 255, 255, 0.08); /* 顶部描边 */
+            border-top: 1px solid rgba(255, 255, 255, 0.08); 
             padding: 12px 16px;
             color: #e5e5e5;
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -127,6 +135,30 @@
             font-weight: 500;
         }
 
+        /* 自定义本地背景图上传按钮样式 */
+        .file-upload-btn {
+            display: block;
+            width: 100%;
+            padding: 5px 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 10px;
+            color: #eee;
+            transition: all 0.2s;
+        }
+
+        .file-upload-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .file-upload-btn input[type="file"] {
+            display: none;
+        }
+
         input[type="range"] {
             width: 100%;
             height: 3px;
@@ -146,12 +178,12 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* 按钮通用设计 */
+        /* 按钮设计 */
         .ui-btn {
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 500;
@@ -163,55 +195,36 @@
             background: rgba(255, 255, 255, 0.22);
             border-color: rgba(255, 255, 255, 0.4);
         }
-
-        /* 悬浮退出预览按钮（移至顶部） */
-        .exit-preview-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            z-index: 100;
-            background: rgba(15, 15, 15, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #eee;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            display: none;
-            transition: all 0.2s;
-        }
-
-        .exit-preview-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
     </style>
 </head>
 <body>
 
-    <!-- 内嵌音频：雨声和背景音乐 -->
+    <!-- 内嵌音频：雨声环境声和背景音乐 -->
     <audio id="rainAudio" src="rain.mp3" loop autoplay></audio>
     <audio id="musicAudio" src="music.mp3" loop autoplay></audio>
 
-    <!-- 3:4 主画面容器 -->
+    <!-- 主画面容器（自适应手机屏幕物理大小） -->
     <div class="viewport-wrapper" id="viewportWrapper">
         <div id="bg-container"></div>
         <canvas id="rainCanvas"></canvas>
-        
-        <!-- 悬浮退出预览按钮 -->
-        <button class="exit-preview-btn" id="exitPreviewBtn">退出预览</button>
 
         <!-- 底部半透明控制面板 -->
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
                 <h3>雨景动效配置</h3>
-                <!-- 全屏预览改为了预览 -->
                 <button class="ui-btn" id="previewBtn">预览</button>
             </div>
             
             <div class="control-grid">
+                <!-- 更换背景图 -->
+                <div class="control-group">
+                    <label>更换背景图</label>
+                    <label class="file-upload-btn">
+                        选择本地图片
+                        <input type="file" id="bgUploader" accept="image/*">
+                    </label>
+                </div>
+
                 <!-- 背景亮度 -->
                 <div class="control-group">
                     <label>背景亮度 <span class="value-display" id="bgBrightnessVal">1.00x</span></label>
@@ -231,7 +244,7 @@
                 </div>
 
                 <!-- 结束高度 -->
-                <div class="control-group">
+                <div class="control-group" style="grid-column: span 2;">
                     <label>落雨结束高度 <span class="value-display" id="landingEndVal">100%</span></label>
                     <input type="range" id="landingEnd" min="0" max="100" value="100">
                 </div>
@@ -246,19 +259,18 @@
         const wrapper = document.getElementById('viewportWrapper');
         const controlPanel = document.getElementById('controlPanel');
         const previewBtn = document.getElementById('previewBtn');
-        const exitPreviewBtn = document.getElementById('exitPreviewBtn');
 
-        // 音频对象获取
+        // 音频对象
         const rainAudio = document.getElementById('rainAudio');
         const musicAudio = document.getElementById('musicAudio');
 
-        // 用户可调参数（及设定的默认初始值）
+        // 用户可调参数（及默认初始值）
         let currentBgBrightness = 1.00; 
         let landingStartRatio = 0.12;   
         let landingEndRatio = 1.00;     
         let globalPatternOpacity = 1.00; 
 
-        // 锁定参数（默认参数，用户不可调节）
+        // 锁定参数（用户不可调节）
         const rainDensity = 30;         
         const rainSpeedMultiplier = 1.0; 
         const baseRainLength = 30;      
@@ -267,7 +279,7 @@
         const rippleSizeRandomness = 100;
         const rainUniformity = 0.35;    
 
-        // 指定的 5 张固定本地图案文件名
+        // 指定的 5 张固定本地品牌图案文件名
         const fixedPatternNames = [
             'eggtart.png',
             'original.png',
@@ -311,7 +323,7 @@
         function initFixedPatterns() {
             fixedPatternNames.forEach(name => {
                 const img = new Image();
-                img.src = name; // 读取本地同级目录下文件
+                img.src = name; 
                 loadedPatterns.push(img);
             });
         }
@@ -394,7 +406,7 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // 绘制内层 2/3 大小的椭圆图案
+                // 绘制内层椭圆图案
                 if (this.hasPattern && this.patternImg) {
                     if (this.patternImg.complete && this.patternImg.naturalWidth !== 0) {
                         ctx.save();
@@ -415,7 +427,7 @@
                         );
                         ctx.restore();
                     } else {
-                        // 占位椭圆：当同级目录下无对应图片文件时自动绘制，避免报错
+                        // 降级占位符（避免无本地图片文件时黑屏报错）
                         ctx.save();
                         ctx.beginPath();
                         ctx.ellipse(this.x, this.y, this.radiusX * 0.67, radiusY * 0.67, 0, 0, Math.PI * 2);
@@ -452,7 +464,7 @@
                 const depthScale = divisor > 0 ? (this.targetY - baseHorizon) / divisor : 0;
                 this.scale = 0.35 + depthScale * 0.65; 
 
-                // 网格通道均匀分布计算
+                // 网格均匀分布计算
                 const randomX = Math.random() * vWidth; 
                 const slotWidth = vWidth / rainDensity; 
                 const slotX = (this.index + Math.random()) * slotWidth; 
@@ -551,33 +563,39 @@
             requestAnimationFrame(animate);
         }
 
-        // --- 音频自动播放与无感激活机制 ---
+        // --- 音频播放逻辑 ---
         function tryPlayAudio() {
             rainAudio.play().catch(() => {});
             musicAudio.play().catch(() => {});
         }
 
-        // 尝试初始自动播放
         window.addEventListener('DOMContentLoaded', tryPlayAudio);
 
-        // 绑定页面任意地方的点击/触碰，一旦被拦截，点击后立即无感唤醒音频
-        window.addEventListener('click', () => {
-            tryPlayAudio();
-        }, { once: true }); // 使用 once 保证激活后立即解绑监听，不消耗性能
-        
-        window.addEventListener('touchstart', () => {
-            tryPlayAudio();
-        }, { once: true });
+        // 页面点击/触摸时无感唤醒音频
+        window.addEventListener('click', () => { tryPlayAudio(); }, { once: true });
+        window.addEventListener('touchstart', () => { tryPlayAudio(); }, { once: true });
 
         // --- 初始化运行 ---
-
         initFixedPatterns();
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
         // --- 交互及控制绑定 ---
 
-        // 1. 背景亮度调节
+        // 1. 背景图上传更换
+        const bgUploader = document.getElementById('bgUploader');
+        bgUploader.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    bgContainer.style.backgroundImage = `url('${event.target.result}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 2. 背景亮度调节
         const bgBrightnessSlider = document.getElementById('bgBrightness');
         const bgBrightnessVal = document.getElementById('bgBrightnessVal');
         bgBrightnessSlider.addEventListener('input', function(e) {
@@ -586,7 +604,7 @@
             bgContainer.style.filter = `brightness(${currentBgBrightness}) contrast(1.1) saturate(0.9)`;
         });
 
-        // 2. 落雨起始位置调节
+        // 3. 落雨起始位置调节
         const landingStartSlider = document.getElementById('landingStart');
         const landingStartVal = document.getElementById('landingStartVal');
         landingStartSlider.addEventListener('input', function(e) {
@@ -594,7 +612,7 @@
             landingStartVal.innerText = e.target.value + '%';
         });
 
-        // 3. 落雨结束位置调节
+        // 4. 落雨结束位置调节
         const landingEndSlider = document.getElementById('landingEnd');
         const landingEndVal = document.getElementById('landingEndVal');
         landingEndSlider.addEventListener('input', function(e) {
@@ -602,7 +620,7 @@
             landingEndVal.innerText = e.target.value + '%';
         });
 
-        // 4. 图案不透明度调节
+        // 5. 图案不透明度调节
         const opacitySlider = document.getElementById('patternOpacity');
         const opacityVal = document.getElementById('opacityVal');
         opacitySlider.addEventListener('input', function(e) {
@@ -610,21 +628,38 @@
             opacityVal.innerText = globalPatternOpacity.toFixed(2);
         });
 
-        // 5. 预览控制（隐藏控制面板，保留纯净 3:4 手机画面）
-        previewBtn.addEventListener('click', () => {
+        // 6. 预览模式逻辑 (隐藏控制面板，点击任意位置回退)
+        let isPreviewMode = false;
+
+        previewBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止点击事件冒泡到 document，避免触发回退
             controlPanel.classList.add('hidden');
-            exitPreviewBtn.style.display = 'block';
+            isPreviewMode = true;
             tryPlayAudio(); // 辅助激活音频
         });
 
-        // 6. 退出预览控制（恢复面板）
-        exitPreviewBtn.addEventListener('click', () => {
-            controlPanel.classList.remove('hidden');
-            exitPreviewBtn.style.display = 'none';
+        // 全局点击监听：在预览模式下，点击页面任何地方均可退出预览恢复面板
+        document.addEventListener('click', (e) => {
+            if (isPreviewMode) {
+                // 如果点击了控制面板内部区域，不执行回退
+                if (controlPanel.contains(e.target)) return;
+
+                controlPanel.classList.remove('hidden');
+                isPreviewMode = false;
+            }
+        });
+
+        // 手机触控回退兼容
+        document.addEventListener('touchstart', (e) => {
+            if (isPreviewMode) {
+                if (controlPanel.contains(e.target)) return;
+
+                controlPanel.classList.remove('hidden');
+                isPreviewMode = false;
+            }
         });
 
         animate();
     </script>
 </body>
 </html>
-```
