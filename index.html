@@ -48,7 +48,7 @@
             background-image: url('https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80');
             background-size: cover;
             background-position: center;
-            filter: brightness(1.0) contrast(1.1) saturate(0.9); /* 默认背景亮度修改为 1.0 */
+            filter: brightness(1.0) contrast(1.1) saturate(0.9); /* 默认背景亮度 1.0 */
             transition: filter 0.1s ease, background-image 0.5s ease;
             z-index: 1;
         }
@@ -78,7 +78,7 @@
             border-radius: 8px;
             color: #e5e5e5;
             width: calc(100% - 30px); /* 在手机上两侧留白 */
-            max-width: 270px; /* 控制框稍微变窄变小 */
+            max-width: 270px; /* 控制框变窄变小 */
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
@@ -354,6 +354,7 @@
 
                 this.hasPattern = Math.random() < 0.666;
                 if (this.hasPattern && fixedPatterns.length > 0) {
+                    // ★★★ 【修复处】：修正了 pool 拼写，改回 fixedPatterns ★★★
                     this.patternImg = fixedPatterns[Math.floor(Math.random() * fixedPatterns.length)];
                 }
             }
