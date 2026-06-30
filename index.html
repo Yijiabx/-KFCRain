@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>手机自适应雨景动效与录制</title>
     <style>
         * {
@@ -26,7 +26,8 @@
         .viewport-wrapper {
             position: relative;
             width: 100vw;
-            height: 100vh;
+            height: 100vh; /* 旧浏览器回退方案 */
+            height: 100dvh; /* 现代动态视口高度，解决Safari/Chrome底部剪裁、遮挡问题 */
             overflow: hidden;
             background-color: #151515;
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -36,7 +37,7 @@
         @media (min-width: 769px) {
             .viewport-wrapper {
                 width: 100%;
-                height: 100%;
+                height: 100dvh;
                 max-width: 430px;       
                 max-height: 932px;      
                 aspect-ratio: 9 / 19.5; 
@@ -53,7 +54,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('my_zebra.jpg'); 
+            background-image: url('my_zebra.webp'); /* 【已修正】默认背景图改为 webp */
             background-size: cover;
             background-position: center;
             filter: brightness(1.0) contrast(1.1) saturate(0.9); 
@@ -72,18 +73,24 @@
             pointer-events: none;
         }
 
-        /* 底部半透明控制面板 */
+        /* 底部半透明控制面板（已进行手机端防阻挡优化） */
         .control-panel {
             position: absolute;
             bottom: 0; 
             left: 0;
             width: 100%;
             z-index: 10;
-            background: rgba(18, 18, 22, 0.55);
+            background: rgba(18, 18, 22, 0.65); /* 稍微提升面板对比度 */
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-top: 1px solid rgba(255, 255, 255, 0.08); 
+            
+            /* 【核心修复】：内边距安全区适配 + 最大高度防撑爆限制 */
             padding: 12px 16px;
+            padding-bottom: calc(14px + env(safe-area-inset-bottom)); /* 智能避开手机底部手势白条 */
+            max-height: 75dvh; /* 控制面板最多占用 75% 屏幕高度，防止小屏手机顶破 */
+            overflow-y: auto;  /* 高度超出时内部支持上下平滑滚动，确保最下方的按钮一定能划出来 */
+            
             color: #e5e5e5;
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
@@ -206,7 +213,7 @@
         <div id="bg-container"></div>
         <canvas id="rainCanvas"></canvas>
 
-        <!--底部半透明控制面板 -->
+        <!-- 底部半透明控制面板 -->
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
                 <h3>雨景动效配置</h3>
@@ -247,9 +254,9 @@
                     <input type="range" id="landingEnd" min="0" max="100" value="100">
                 </div>
 
-                <!-- 录制按钮（完美融入 UI 网格，通栏红色设计） -->
+                <!-- 录制按钮（文字已精简，适配各尺寸手机屏幕） -->
                 <button class="ui-btn" id="recordBtn" style="grid-column: span 2; background: #e02424; border-color: #c81e1e; font-weight: bold; margin-top: 4px;">
-                    录制并下载 8 秒高清带声音视频
+                    录制并下载 8秒带声视频
                 </button>
             </div>
         </div>
@@ -268,7 +275,7 @@
         const rainAudio = document.getElementById('rainAudio');
         const musicAudio = document.getElementById('musicAudio');
 
-        // 用户可调参数（您的默认初始值）
+        // 用户可调参数（及您的默认初始值）
         let currentBgBrightness = 1.00; 
         let landingStartRatio = 0.12;   
         let landingEndRatio = 1.00;     
@@ -303,7 +310,7 @@
 
         // 为了在 Canvas 中进行后台视频录屏，将背景图加载为 Image 节点
         const bgImage = new Image();
-        bgImage.src = 'my_zebra.jpg'; // 初始指向 my_zebra.jpg
+        bgImage.src = 'my_zebra.webp'; // 【已修正】这里同步改为 my_zebra.webp
 
         function resizeCanvas() {
             dpr = window.devicePixelRatio || 1;
@@ -551,7 +558,7 @@
             }
         }
 
-        // 核心渲染循环（重构：背景图画在 Canvas 最底层，实现 100% 视频录制捕获）
+        // 核心渲染循环（背景图画在 Canvas 最底层，实现 100% 视频录制捕获）
         function animate() {
             ctx.clearRect(0, 0, vWidth, vHeight);
 
@@ -595,7 +602,7 @@
             requestAnimationFrame(animate);
         }
 
-        // --- 高级 Web Audio API 混音节点控制（录制带声音视频） ---
+        // --- 高级 Web Audio API 混音系统（录制带声音视频） ---
         let audioCtx = null;
         let destNode = null;
         let audioInitialized = false;
@@ -612,11 +619,11 @@
                 // 创建一个专供 MediaRecorder 捕获的混音总出口
                 destNode = audioCtx.createMediaStreamDestination();
                 
-                // 声音输出到喇叭（供用户听见）
+                // 声音输出到喇叭
                 rainSource.connect(audioCtx.destination);
                 musicSource.connect(audioCtx.destination);
                 
-                // 声音输出到录制节点（供录屏捕获）
+                // 声音输出到录制节点
                 rainSource.connect(destNode);
                 musicSource.connect(destNode);
                 
@@ -728,23 +735,20 @@
         let isRecording = false;
 
         recordBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 阻止触发预览或返回
+            e.stopPropagation(); 
             if (isRecording) return;
             isRecording = true;
             recordBtn.disabled = true;
 
-            // 确保音频混音上下文已跑起来
             tryPlayAudio();
 
             const chunks = [];
-            // 抓取 30FPS 视频图像流
             const canvasStream = canvas.captureStream(30); 
 
-            // 抓取 Web Audio 的混音总音频轨，并塞进视频流里
             if (destNode && destNode.stream) {
                 const audioTracks = destNode.stream.getAudioTracks();
                 if (audioTracks.length > 0) {
-                    canvasStream.addTrack(audioTracks[0]); // 视频音画合一！
+                    canvasStream.addTrack(audioTracks[0]); 
                 }
             }
 
@@ -783,7 +787,7 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                recordBtn.innerText = '录制并下载 8 秒高清带声音视频';
+                recordBtn.innerText = '录制并下载 8秒带声视频';
                 recordBtn.disabled = false;
                 isRecording = false;
             };
