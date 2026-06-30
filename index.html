@@ -674,6 +674,18 @@
             }
         });
 
+        // 👇【成功添加在这里】
+        bgUploader.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    bgContainer.style.backgroundImage = `url('${event.target.result}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
         animate();
     </script>
 </body>
